@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="459a3ec2-5338-4211-a218-dd79a12fa521" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="send-xlsxFlow" doc:id="2586e34f-709d-4caa-be54-9ea807dd903c" >
+		<http:listener doc:name="Listener" doc:id="d17b0793-d091-489d-88af-d5860f0531bc" config-ref="HTTP_Listener_config" path="send-xlsx"/>
+		<set-variable value="#[attributes.queryParams.format]" doc:name="save query parameter as variable" doc:id="94320f7a-1c7b-4482-a623-feaa07edd06f" variableName="queryParamDataFormat"/>
+		<set-variable value="#[attributes.headers.'content-type']" doc:name="save header content type as variable" doc:id="18dcfaad-7a00-49f4-baa3-c6a6254bc799" variableName="headerDataFormat"/>
+		<ee:transform doc:name="Transform Message" doc:id="2ff0ce5a-5243-484e-b10f-faef5231bbd0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="requested_format" ><![CDATA[%dw 2.0
+output application/json
+---
+ if (isEmpty(vars.queryParamDataFormat) == true)
+   splitBy(vars.headerDataFormat, '/')[1]
+else
+   vars.queryParamDataFormat
+]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<file:read doc:name="Read xlsx data" doc:id="b310f20d-2228-4903-810c-5b3c76c12269" path="D:\My docs\Mulesoft class\Mule Fissh\data\airports.xlsx" outputMimeType="application/xlsx"/>
+		<choice doc:name="Choice" doc:id="ff2bd371-7fba-445b-b720-81e02155f7aa" >
+			<when expression="#[vars.requested_format=='csv']">
+				<ee:transform doc:name="Transform Message" doc:id="13bc9a46-b60a-4661-a2db-ba1a5aa60a94" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/csv
+---
+payload.airports]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.requested_format=='xml']">
+				<ee:transform doc:name="Transform Message" doc:id="58cb837a-3fa8-4e6e-b4bf-5377236413d7" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+{
+	'airports':
+	{
+		"data":payload.airports
+	}
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[vars.requested_format=='json']">
+				<ee:transform doc:name="Transform Message" doc:id="0de61cf4-92a0-4254-a073-853863547f3c" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.airports]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[isEmpty(vars.requested_format)]">
+				<ee:transform doc:name="Transform Message" doc:id="690d8e69-13c6-434f-ade4-54ff42b63ba3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.airports]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="Transform Message" doc:id="bb78bb74-e0f6-480f-85ab-f6e3f74ce4f1" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message":vars.requested_format default " " ++"is not supported data format!"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+</mule>
