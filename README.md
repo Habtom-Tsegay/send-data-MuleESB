@@ -1,2 +1,2 @@
 # send-data-MuleESB
-This Application sends xml data in the requested format.
+This Application sends xlsx data in the requested format.
